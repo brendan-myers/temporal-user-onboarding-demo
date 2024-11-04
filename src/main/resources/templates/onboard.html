@@ -1,0 +1,409 @@
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <title>Onboarding Example</title>
+        
+        <style>
+            * {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+
+            .disabled, .disabled table, .disabled button {
+                /* background: #333; */
+                color: #ccc;
+            }
+
+            .disabled .keepVisible {
+                color: black;
+            }
+
+            td {
+                padding: 3px 3px 7px 3px;
+                width: 150px;
+            }
+
+            .hide {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <center>
+            <h1>Onboarding Example</h1>
+
+            <a href="/">&lt Back</a> | <a id="temporalLink" href="#" target="_blank"></a>
+
+            <br/><br/>
+
+            <div id="basic-info" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>Basic Info</b></td>
+                    </tr>
+                    <tr>
+                        <td>Aadhar</td>
+                        <td>
+                            <input id="aadhar" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>PAN</td>
+                        <td>
+                            <input id="pan" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Mobile</td>
+                        <td>
+                            <input id="mobile" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="basic-info-button" disabled>Submit</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="aadhar-otp" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>Aadhar OTP</b></td>
+                    </tr>
+                    <tr>
+                        <td>Aadhar OTP</td>
+                        <td>
+                            <input id="aadharOtp" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="aadhar-otp-button">Submit</button>
+                            <div id="aadhar-otp-msg" class="keepVisible"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="user-details" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>User Details</b></td>
+                    </tr>
+                    <tr>
+                        <td>Details</td>
+                        <td>
+                            <input id="details" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="user-details-button">Submit</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="communication-details" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>Communication Details</b></td>
+                    </tr>
+                    <tr>
+                        <td>Email Address</td>
+                        <td>
+                            <input id="emailAddress" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="communication-details-button">Submit</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="email-otp" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>Email OTP</b></td>
+                    </tr>
+                    <tr>
+                        <td>Email OTP</td>
+                        <td>
+                            <input id="emailOtp" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="email-otp-button">Submit</button>
+                            <div id="email-otp-msg" class="keepVisible"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="additional-details" class="disabled">
+                <table>
+                    <tr>
+                        <td><b>Additional Details</b></td>
+                    </tr>
+                    <tr>
+                        <td>Additional Details</td>
+                        <td>
+                            <input id="additionalDetails" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button id="additional-details-button">Submit</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <h1 id="complete" class="hide">Onboarding complete</h1>
+        </center>
+
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get("id");
+            const runId = urlParams.get("runId");
+
+            const ACTIVE_STATES = [
+                "WAITING_FOR_BASIC_INFO",
+                "WAITING_FOR_AADHAR_OTP",
+                "VERIFYING_AADHAR_OTP",
+                "RETRY_WAITING_FOR_AADHAR_OTP",
+                "WAITING_FOR_USER_DETAILS",
+                "WAITING_FOR_COMMUNICATION_DETAILS",
+                "WAITING_FOR_EMAIL_OTP",
+                "VERIFYING_EMAIL_OTP",
+                "RETRY_WAITING_FOR_EMAIL_OTP",
+                "WAITING_FOR_ADDITIONAL_DETAILS",
+                "COMPLETE",
+            ];
+
+            const SECTIONS = [
+                "basic-info",
+                "aadhar-otp",
+                "user-details",
+                "communication-details",
+                "email-otp",
+                "additional-details",
+            ]
+
+            // first check if there is an active workflow
+
+            function checkState() {
+                fetch(`http://localhost:8080/onboarding/${id}/current-state`).then(res => {
+                    return res.json();
+                }).then(data => {
+                    if (ACTIVE_STATES.includes(data.step)) {
+                        updateState(data);
+
+                        if (data.step != "COMPLETE") {
+                            setTimeout(checkState, 1000);
+                        }
+                    }
+
+                }).catch(err => {
+                    console.error(err);
+                });
+            }
+
+            function updateState(state) {
+                if (state.aadhar != "")
+                    document.getElementById("aadhar").value = state.aadhar;
+                if (state.pan != "")
+                    document.getElementById("pan").value = state.pan;
+                if (state.mobile != "")
+                    document.getElementById("mobile").value = state.mobile;
+                if (state.details != "")
+                    document.getElementById("details").value = state.details;
+                if (state.emailAddress != "")
+                    document.getElementById("emailAddress").value = state.emailAddress;
+                if (state.additionalDetails != "")
+                    document.getElementById("additionalDetails").value = state.additionalDetails;
+  
+                updateStep(state.step);
+            }
+
+            function updateStep(step) {
+                document.getElementById("aadhar-otp-msg").innerText = "";
+                document.getElementById("email-otp-msg").innerText = "";
+
+                switch(step) {
+                    case "WAITING_FOR_BASIC_INFO":
+                        enable("basic-info");
+                        break;
+
+                    case "VERIFYING_AADHAR_OTP":
+                        document.getElementById("aadhar-otp-msg").innerText = "Verifying. Please wait."
+                        break
+                    case "RETRY_WAITING_FOR_AADHAR_OTP":
+                        document.getElementById("aadhar-otp-msg").innerText = "Failed. Please retry."
+                    case "WAITING_FOR_AADHAR_OTP":
+                        enable("aadhar-otp");
+                        break;
+
+                    case "WAITING_FOR_USER_DETAILS":
+                        enable("user-details");
+                        break;
+
+                    case "WAITING_FOR_COMMUNICATION_DETAILS":
+                        enable("communication-details");
+                        break;
+
+                    case "VERIFYING_EMAIL_OTP":
+                        document.getElementById("email-otp-msg").innerText = "Verifying. Please wait."
+                        break;
+                    case "RETRY_WAITING_FOR_EMAIL_OTP":
+                        document.getElementById("email-otp-msg").innerText = "Failed. Please retry."
+                    case "WAITING_FOR_EMAIL_OTP":
+                        enable("email-otp");
+                        break;
+
+                    case "WAITING_FOR_ADDITIONAL_DETAILS":
+                        enable("additional-details");
+                        break;
+
+                    case "COMPLETE":
+                        document.getElementById("complete").classList.remove("hide");
+                        break;
+                }
+            }
+
+            function enable(sectionName) {
+                toggle(sectionName, false);
+
+                SECTIONS.forEach(section => {
+                    if (section != sectionName) {
+                        disable(section);
+                    }
+                });
+            }
+
+            function disable(sectionName) {
+                toggle(sectionName, true);
+            }
+
+            function toggle(sectionName, disabled) {
+                section = document.getElementById(sectionName);
+
+                if (!disabled)
+                    section.classList.remove("disabled");
+                else
+                    section.classList.add("disabled");
+
+                button = section.querySelector('button').disabled = disabled;
+
+                fields = section.querySelectorAll("input");
+                fields.forEach(field => {
+                    field.disabled = disabled;
+                });
+            }
+
+            async function send(resource) {
+                var url = `http://localhost:8080/onboarding/${id}/${resource}`;
+
+                await fetch(url).then(res => {
+                    return res.json();
+                }).then(data => {
+                    updateStep(data);
+                    checkState();
+                }).catch(err => {
+                    console.error(err);
+                });
+            }
+
+            document.getElementById("basic-info-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("basic-info");
+
+                var aadhar = document.getElementById("aadhar").value;
+                var pan = document.getElementById("pan").value;
+                var mobile = document.getElementById("mobile").value;
+                var url = `basic-info?aadhar=${aadhar}&pan=${pan}&mobile=${mobile}`;
+
+                send(url);
+            }
+
+            document.getElementById("aadhar-otp-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("aadhar-otp");
+
+                var aadharOtp = document.getElementById("aadharOtp").value;
+                var url = `aadhar-otp?aadharOtp=${aadharOtp}`;
+
+                send(url);
+            }
+            
+            document.getElementById("user-details-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("user-details");
+
+                var details = document.getElementById("details").value;
+                var url = `user-details?details=${details}`;
+
+                send(url);
+            }
+
+            document.getElementById("communication-details-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("user-details");
+
+                var emailAddress = document.getElementById("emailAddress").value;
+                var url = `communication-details?emailAddress=${emailAddress}`;
+
+                send(url);
+            }
+
+            document.getElementById("email-otp-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("email-otp");
+
+                var emailOtp = document.getElementById("emailOtp").value;
+                var url = `email-otp?emailOtp=${emailOtp}`;
+
+                send(url);
+            }
+
+            document.getElementById("additional-details-button").onclick = function(e) {
+                e.preventDefault();
+
+                disable("additional-details");
+
+                var additionalDetails = document.getElementById("additionalDetails").value;
+                var url = `additional-details?additionalDetails=${additionalDetails}`;
+
+                send(url);
+            }
+
+            const textFields = document.querySelectorAll('input');
+            textFields.forEach(field => {
+                field.disabled = true;
+            });
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(field => {
+                field.disabled = true;
+            });
+
+            document.getElementById("temporalLink").href = `http://localhost:8233/namespaces/default/workflows/${id}/${runId}/history`;
+            document.getElementById("temporalLink").text = id;
+
+            checkState();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,8 @@
+server:
+  port : 8080
+spring:
+  temporal:
+    connection:
+      target: local
+    workers-auto-discovery:
+      packages: com.brendan.temporal

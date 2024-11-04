@@ -1,0 +1,78 @@
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <title>Onboarding Example</title>
+        
+        <style>
+            * {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+
+            th, td {
+                padding: 3px 3px 7px 3px;
+                width: 150px;
+                border-bottom: 1px dashed #ccc;
+            }
+        </style>
+    </head>
+    <body>
+        <center>
+            <h1>Onboarding Example</h1>
+
+            <button id="start">Start Onboarding</button>
+
+            <br/><br/>
+
+            <table id="workflows">
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                </tr>
+            </table>
+        </center>
+
+        <script>
+            async function send(url) {
+                return await fetch(url).then(res => {
+                    return res.json();
+                }).then(data => {
+                    return data;
+                }).catch(err => {
+                    console.error(err);
+                });
+            }
+
+            async function getWorkflows() {
+                var workflows = await send("http://localhost:8080/onboarding/list");
+
+                var table = document.getElementById("workflows");
+
+                workflows.forEach(workflow => {
+                    if (workflow.status == "WORKFLOW_EXECUTION_STATUS_RUNNING" || workflow.status == "WORKFLOW_EXECUTION_STATUS_COMPLETED") {
+                        var row = table.insertRow(-1);
+    
+                        var id = row.insertCell(0);
+                        var status = row.insertCell(1);
+    
+                        var label = workflow.workflowId.substr(0,8) + "...";
+
+                        id.innerHTML = `<a href="onboarding?id=${workflow.workflowId}&runId=${workflow.runId}">${label}</a>`;
+                        status.innerHTML = workflow.status == "WORKFLOW_EXECUTION_STATUS_RUNNING" ? "In flight" : "Complete";
+                    }
+                });
+            }
+
+            async function getNewWorkflow() {
+                var workflow = await send("http://localhost:8080/onboarding/start");
+                window.location.href = `onboarding?id=${workflow.workflowId}&runId=${workflow.runId}`;
+            }
+
+            document.getElementById("start").onclick = function(e) {
+                e.preventDefault();
+
+                getNewWorkflow();
+            }
+
+            getWorkflows();
+        </script>
+    </body>
+</html>
